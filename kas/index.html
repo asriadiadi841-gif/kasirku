@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2196f3">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Kasir Kedai Minuman - WhatsApp Order</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+        body { font-family: 'Poppins', sans-serif; background-color: #f8fafc; }
+        .menu-card { transition: all 0.2s ease; }
+        .menu-card:hover { transform: translateY(-3px); }
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .quantity-control { display: flex; align-items: center; gap: 8px; background: #f1f5f9; padding: 4px; border-radius: 12px; }
+        @keyframes pop { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        .animate-pop { animation: pop 0.2s ease-out; }
+    </style>
+</head>
+<body class="bg-gray-50">
+
+    <div class="flex flex-col md:flex-row h-screen overflow-hidden">
+        
+        <!-- Main Menu Section -->
+        <div class="w-full md:w-3/4 p-4 md:p-8 overflow-y-auto h-full border-r border-gray-200">
+            <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-800 tracking-tight">Kedai Segar Nusantara</h1>
+                    <p class="text-gray-500 text-sm">Kelola pesanan dengan pengiriman otomatis ke WhatsApp</p>
+                </div>
+                <div class="bg-white shadow-sm border px-4 py-2 rounded-xl flex items-center gap-3">
+                    <span id="current-time" class="font-mono font-bold text-blue-600 tracking-widest text-lg">00:00:00</span>
+                </div>
+            </header>
+
+            <!-- Kategori -->
+            <div class="flex gap-3 mb-8 overflow-x-auto pb-2 scrollbar-hide">
+                <button onclick="filterMenu('all')" class="category-btn active bg-blue-600 text-white px-6 py-2.5 rounded-2xl shadow-lg shadow-blue-100 whitespace-nowrap font-semibold">Semua Menu</button>
+                <button onclick="filterMenu('Kopi')" class="category-btn bg-white text-gray-600 px-6 py-2.5 rounded-2xl border hover:bg-blue-50 whitespace-nowrap font-medium transition">Kopi</button>
+                <button onclick="filterMenu('Teh')" class="category-btn bg-white text-gray-600 px-6 py-2.5 rounded-2xl border hover:bg-blue-50 whitespace-nowrap font-medium transition">Teh</button>
+                <button onclick="filterMenu('Susu')" class="category-btn bg-white text-gray-600 px-6 py-2.5 rounded-2xl border hover:bg-blue-50 whitespace-nowrap font-medium transition">Susu & Boba</button>
+            </div>
+
+            <!-- Menu Grid -->
+            <div id="menu-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <!-- Items injected via JS -->
+            </div>
+        </div>
+
+        <!-- Order Summary Side Panel -->
+        <div class="w-full md:w-1/4 bg-white p-6 shadow-2xl flex flex-col h-full z-10 border-l border-gray-100">
+            <div class="mb-6">
+                <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                    Ringkasan Order
+                </h2>
+                <div id="order-list-summary" class="mt-4 space-y-2 max-h-[40vh] overflow-y-auto custom-scroll pr-2 text-sm text-gray-600">
+                    <!-- List text orders -->
+                </div>
+            </div>
+
+            <!-- Totals -->
+            <div class="mt-auto border-t border-gray-100 pt-6">
+                <div class="space-y-3 mb-6">
+                    <div class="flex justify-between text-gray-500">
+                        <span>Total Items</span>
+                        <span id="summary-count" class="font-bold text-gray-800">0</span>
+                    </div>
+                    <div class="flex justify-between text-gray-500">
+                        <span>Pajak (10%)</span>
+                        <span id="tax" class="font-bold text-gray-800">Rp 0</span>
+                    </div>
+                    <div class="flex justify-between text-2xl font-black text-gray-900 pt-3 border-t border-dashed border-gray-200">
+                        <span>Total</span>
+                        <span id="total-price" class="text-blue-600">Rp 0</span>
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-3">
+                    <button id="pay-button" onclick="processPayment()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-bold shadow-xl shadow-blue-100 transition-all active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed">
+                        KONFIRMASI BAYAR
+                    </button>
+                    <button onclick="clearCart()" class="w-full py-2 text-gray-400 hover:text-red-500 text-sm font-medium transition">
+                        Reset Pesanan
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Modal -->
+    <div id="payment-modal" class="hidden fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-[2.5rem] p-8 max-w-sm w-full text-center shadow-2xl">
+            <h3 class="text-2xl font-black text-gray-800">Scan QR Code</h3>
+            <p class="text-gray-500 text-sm mt-2 mb-8">Pembayaran terintegrasi WhatsApp Owner</p>
+            
+            <div class="flex justify-center mb-8 bg-slate-50 p-6 rounded-3xl inline-block border-2 border-dashed border-slate-200">
+                <div id="qr-container" class="relative">
+                    <img id="custom-qr-image" 
+                         src="" 
+                         alt="QR Toko" 
+                         class="w-[200px] h-[200px] object-contain hidden">
+                    <div id="qrcode"></div>
+                </div>
+            </div>
+            
+            <div class="bg-blue-600 text-white p-6 rounded-3xl mb-8">
+                <p class="text-[10px] font-bold uppercase tracking-widest opacity-80 mb-1">Total Tagihan</p>
+                <p id="modal-total" class="text-3xl font-black tracking-tight">Rp 0</p>
+            </div>
+
+            <div class="flex flex-col gap-3">
+                <button onclick="finalizeOrder()" class="w-full bg-green-600 text-white py-4 rounded-2xl font-bold hover:bg-green-700 transition flex items-center justify-center gap-2 shadow-lg shadow-green-100">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.414 0 .018 5.393.015 12.03a11.811 11.811 0 001.592 5.96L0 24l6.12-1.605a11.787 11.787 0 005.925 1.585h.005c6.637 0 12.032-5.391 12.036-12.027a11.8 11.8 0 00-3.417-8.467z"/></svg>
+                    Konfirmasi & Kirim Pesanan
+                </button>
+                <button onclick="backToOrder()" class="w-full bg-slate-100 text-slate-700 py-3 rounded-2xl font-bold hover:bg-slate-200 transition">
+                    Kembali Ke Pesanan
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // KONFIGURASI AUTOMASI
+        const OWNER_PHONE = "6285180952721"; // Nomor WhatsApp Owner Baru
+        const USE_CUSTOM_IMAGE = false; 
+        const MY_CUSTOM_QR_URL = ""; 
+
+        const menuData = [
+            { id: 1, name: 'Kopi Susu Gula Aren', price: 18000, category: 'Kopi', image: '☕' },
+            { id: 2, name: 'Americano Ice', price: 15000, category: 'Kopi', image: '🥤' },
+            { id: 3, name: 'Thai Tea Special', price: 12000, category: 'Teh', image: '🍵' },
+            { id: 4, name: 'Matcha Latte', price: 22000, category: 'Susu', image: '🍵' },
+            { id: 5, name: 'Boba Brown Sugar', price: 25000, category: 'Susu', image: '🧋' },
+            { id: 6, name: 'Es Teh Manis', price: 5000, category: 'Teh', image: '🍹' },
+            { id: 7, name: 'Caramel Macchiato', price: 28000, category: 'Kopi', image: '☕' },
+            { id: 8, name: 'Lemon Tea', price: 10000, category: 'Teh', image: '🍋' }
+        ];
+
+        let cart = [];
+        const TAX_RATE = 0.1;
+
+        function renderMenu(items) {
+            const grid = document.getElementById('menu-grid');
+            grid.innerHTML = items.map(item => {
+                const cartItem = cart.find(c => c.id === item.id);
+                const qty = cartItem ? cartItem.quantity : 0;
+                
+                return `
+                    <div class="menu-card bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex flex-col items-center">
+                        <div class="text-6xl mb-4 transform hover:scale-110 transition-transform cursor-default">${item.image}</div>
+                        <div class="text-center w-full">
+                            <span class="text-[10px] font-bold text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full uppercase tracking-tighter">${item.category}</span>
+                            <h3 class="font-bold text-gray-800 text-sm mt-2 h-8 overflow-hidden line-clamp-2">${item.name}</h3>
+                            <p class="text-gray-400 font-bold text-sm mb-4">Rp ${item.price.toLocaleString('id-ID')}</p>
+                        </div>
+                        
+                        <div class="w-full mt-auto">
+                            ${qty === 0 ? `
+                                <button onclick="addToCart(${item.id})" class="w-full bg-blue-50 text-blue-600 font-bold py-3 rounded-2xl border border-blue-100 hover:bg-blue-600 hover:text-white transition-all active:scale-95">
+                                    Tambah
+                                </button>
+                            ` : `
+                                <div class="quantity-control flex justify-between items-center bg-blue-600 text-white p-1 rounded-2xl shadow-lg shadow-blue-100">
+                                    <button onclick="updateQuantity(${item.id}, -1)" class="w-10 h-10 flex items-center justify-center hover:bg-white/20 rounded-xl transition font-black text-xl"> – </button>
+                                    <span class="font-black text-lg animate-pop">${qty}</span>
+                                    <button onclick="updateQuantity(${item.id}, 1)" class="w-10 h-10 flex items-center justify-center hover:bg-white/20 rounded-xl transition font-black text-xl"> + </button>
+                                </div>
+                            `}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function filterMenu(category) {
+            document.querySelectorAll('.category-btn').forEach(btn => {
+                btn.classList.remove('bg-blue-600', 'text-white', 'shadow-lg', 'active');
+                btn.classList.add('bg-white', 'text-gray-600', 'border');
+            });
+            event.target.classList.add('bg-blue-600', 'text-white', 'shadow-lg', 'active');
+            event.target.classList.remove('bg-white', 'text-gray-600', 'border');
+
+            if (category === 'all') {
+                renderMenu(menuData);
+            } else {
+                renderMenu(menuData.filter(m => m.category === category));
+            }
+        }
+
+        function addToCart(id) {
+            const product = menuData.find(p => p.id === id);
+            cart.push({ ...product, quantity: 1 });
+            updateUI();
+        }
+
+        function updateQuantity(id, delta) {
+            const item = cart.find(i => i.id === id);
+            if (item) {
+                item.quantity += delta;
+                if (item.quantity <= 0) {
+                    cart = cart.filter(i => i.id !== id);
+                }
+            }
+            updateUI();
+        }
+
+        function updateUI() {
+            const activeFilterElement = document.querySelector('.category-btn.active');
+            const activeFilter = activeFilterElement ? activeFilterElement.innerText : "Semua Menu";
+            
+            if (activeFilter === "Semua Menu") {
+                renderMenu(menuData);
+            } else {
+                renderMenu(menuData.filter(m => m.category === activeFilter));
+            }
+
+            const listContainer = document.getElementById('order-list-summary');
+            if (cart.length === 0) {
+                listContainer.innerHTML = '<p class="italic text-gray-400">Belum ada item dipilih...</p>';
+            } else {
+                listContainer.innerHTML = cart.map(item => `
+                    <div class="flex justify-between items-center py-1 border-b border-gray-50">
+                        <span>${item.name} <span class="text-blue-600 font-bold">x${item.quantity}</span></span>
+                        <span class="font-medium">Rp ${(item.price * item.quantity).toLocaleString('id-ID')}</span>
+                    </div>
+                `).join('');
+            }
+
+            const totalItems = cart.reduce((acc, curr) => acc + curr.quantity, 0);
+            const subtotal = cart.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0);
+            const tax = subtotal * TAX_RATE;
+            const total = subtotal + tax;
+
+            document.getElementById('summary-count').innerText = totalItems;
+            document.getElementById('tax').innerText = `Rp ${tax.toLocaleString('id-ID')}`;
+            document.getElementById('total-price').innerText = `Rp ${total.toLocaleString('id-ID')}`;
+            document.getElementById('pay-button').disabled = (cart.length === 0);
+        }
+
+        function clearCart() {
+            cart = [];
+            updateUI();
+        }
+
+        function processPayment() {
+            const modal = document.getElementById('payment-modal');
+            const qrContainer = document.getElementById('qrcode');
+            const customImg = document.getElementById('custom-qr-image');
+            
+            modal.classList.remove('hidden');
+
+            const totalAmount = cart.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0) * (1 + TAX_RATE);
+            document.getElementById('modal-total').innerText = `Rp ${totalAmount.toLocaleString('id-ID')}`;
+
+            if (USE_CUSTOM_IMAGE && MY_CUSTOM_QR_URL !== "") {
+                qrContainer.classList.add('hidden');
+                customImg.classList.remove('hidden');
+                customImg.src = MY_CUSTOM_QR_URL;
+            } else {
+                qrContainer.classList.remove('hidden');
+                customImg.classList.add('hidden');
+                qrContainer.innerHTML = ""; 
+                new QRCode(qrContainer, {
+                    text: `ORDER-${Date.now()}-TOTAL-${totalAmount}`,
+                    width: 200,
+                    height: 200,
+                    colorDark : "#1e293b",
+                    colorLight : "#f8fafc",
+                    correctLevel : QRCode.CorrectLevel.H
+                });
+            }
+        }
+
+        function backToOrder() {
+            document.getElementById('payment-modal').classList.add('hidden');
+        }
+
+        function finalizeOrder() {
+            if (cart.length === 0) return;
+
+            // 1. Ambil Waktu Transaksi
+            const now = new Date();
+            const timeStr = now.toLocaleString('id-ID');
+
+            // 2. Susun Pesan WhatsApp (Otomatis ke Owner)
+            let message = `🚀 *NOTIFIKASI PESANAN MASUK*\n`;
+            message += `------------------------------------------\n`;
+            message += `📅 Waktu: ${timeStr}\n`;
+            message += `📋 Detail Pesanan:\n\n`;
+            
+            cart.forEach((item, index) => {
+                message += `${index + 1}. ${item.name}\n   └ ${item.quantity} x Rp ${item.price.toLocaleString('id-ID')} = *Rp ${(item.price * item.quantity).toLocaleString('id-ID')}*\n`;
+            });
+
+            const subtotal = cart.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0);
+            const tax = subtotal * TAX_RATE;
+            const total = subtotal + tax;
+
+            message += `\n------------------------------------------\n`;
+            message += `*Subtotal:* Rp ${subtotal.toLocaleString('id-ID')}\n`;
+            message += `*Pajak (10%):* Rp ${tax.toLocaleString('id-ID')}\n`;
+            message += `*TOTAL PEMBAYARAN: Rp ${total.toLocaleString('id-ID')}*\n`;
+            message += `------------------------------------------\n`;
+            message += `✅ *STATUS: PEMBAYARAN TERKONFIRMASI*\n`;
+            message += `------------------------------------------\n`;
+            message += `_Pesanan ini dikirim otomatis oleh Sistem Kasir Kedai_`;
+
+            // 3. Encode pesan untuk URL WhatsApp
+            const encodedMessage = encodeURIComponent(message);
+            const whatsappUrl = `https://wa.me/${OWNER_PHONE}?text=${encodedMessage}`;
+
+            // 4. Eksekusi Pengiriman (Buka WhatsApp)
+            window.open(whatsappUrl, '_blank');
+
+            // 5. Tutup Modal & Reset Aplikasi
+            document.getElementById('payment-modal').classList.add('hidden');
+            clearCart();
+        }
+
+        setInterval(() => {
+            const timeEl = document.getElementById('current-time');
+            if (timeEl) timeEl.innerText = new Date().toLocaleTimeString('id-ID', { hour12: false });
+        }, 1000);
+
+        window.onload = () => renderMenu(menuData);
+    </script>
+    <script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js')
+        .then(reg => console.log('Aplikasi Kasir Siap Mobile!'))
+        .catch(err => console.log('Gagal daftar PWA', err));
+    });
+  }
+</script>
+</body>
+</html>
